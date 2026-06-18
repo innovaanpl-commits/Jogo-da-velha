@@ -152,9 +152,15 @@ export default function App() {
       }
 
       setUser(firebaseUser);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro no login: ", error);
-      setSignError("Erro ao criar perfil. Tente novamente mais tarde.");
+      const errCode = error?.code || "desconhecido";
+      const errMessage = error?.message || "";
+      if (errCode === "auth/operation-not-allowed") {
+        setSignError("Erro (auth/operation-not-allowed): O provedor de Login Anônimo está desativado no Firebase. Ative 'Anonymous' em Authentication > Sign-in Method no Console do Firebase.");
+      } else {
+        setSignError(`Erro de Autenticação (${errCode}): ${errMessage || "Verifique as configurações do Firestore/Auth."}`);
+      }
     } finally {
       setSigningIn(false);
     }
@@ -201,7 +207,9 @@ export default function App() {
       } else if (error?.code === "auth/popup-closed-by-user") {
         setSignError("O login foi cancelado ao fechar a janela da Conta Google.");
       } else {
-        setSignError("Erro ao autenticar com Google. Tente usar a opção rápida por apelido.");
+        const errCode = error?.code || "desconhecido";
+        const errMessage = error?.message || "";
+        setSignError(`Erro de Autenticação com Google (${errCode}): ${errMessage || "Verifique se o login com Google está ativado no Firebase Console."}. Tente usar a opção rápida de apelido.`);
       }
     } finally {
       setSigningIn(false);
