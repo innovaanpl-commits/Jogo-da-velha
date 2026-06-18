@@ -268,7 +268,7 @@ export default function App() {
 
           {/* Subtitle */}
           <p className="text-gray-400 text-xs md:text-sm font-light mt-8 max-w-md md:max-w-xl leading-relaxed tracking-wide text-center">
-            The classic game — now with ranked matchmaking, XP, and global leaderboards. Connect, play, climb.
+            O jogo clássico — agora com partidas ranqueadas, XP e placar global. Conecte-se, jogue, suba no ranking.
           </p>
 
           {/* Auth Button Row */}
@@ -348,6 +348,31 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="w-full max-w-3xl mx-auto mt-12 pt-6 border-t border-dark-border/40 text-center relative z-10 font-mono text-[10px] tracking-wider text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+          <div>
+            Este jogo foi desenvolvido pela{" "}
+            <a
+              href="https://www.innovamz.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#66FCF1] hover:text-[#66FCF1]/80 hover:underline transition font-bold"
+            >
+              'innova'
+            </a>
+          </div>
+          <div>
+            <a
+              href="https://www.innovamz.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#6875F5] hover:text-[#6875F5]/80 hover:underline transition"
+            >
+              www.innovamz.com
+            </a>
+          </div>
+        </footer>
 
         {/* Floating Modal for Authentication (Signup / Login) */}
         {showAuthModal && (
@@ -536,6 +561,31 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="max-w-6xl mx-auto px-6 mt-16 pt-6 border-t border-dark-border/40 text-center font-mono text-[10px] tracking-wider text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4 select-none pb-8">
+        <div>
+          Este jogo foi desenvolvido pela{" "}
+          <a
+            href="https://www.innovamz.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#66FCF1] hover:text-[#66FCF1]/80 hover:underline transition font-bold"
+          >
+            'innova'
+          </a>
+        </div>
+        <div>
+          <a
+            href="https://www.innovamz.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#6875F5] hover:text-[#6875F5]/80 hover:underline transition"
+          >
+            www.innovamz.com
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

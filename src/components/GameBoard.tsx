@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { doc, updateDoc, onSnapshot, arrayUnion, setDoc } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, arrayUnion, arrayRemove, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { GameRoom, MatchHistoryItem } from "../types";
-import { X, Circle, ArrowLeft, RefreshCw, Copy, Check, Users, Sparkles, UserCheck, LogOut, AlertTriangle, Volume2, VolumeX } from "lucide-react";
+import { X, Circle, ArrowLeft, RefreshCw, Copy, Check, Users, Sparkles, UserCheck, LogOut, AlertTriangle, Volume2, VolumeX, Eye } from "lucide-react";
 import { motion } from "motion/react";
 import Chat from "./Chat";
 import { sounds } from "../lib/sounds";
@@ -92,6 +92,27 @@ export default function GameBoard({ roomId, currentUserId, currentUserName, onLe
 
     return () => unsubscribe();
   }, [roomId, currentUserId, currentUserName, onLeaveRoom]);
+
+  // Register/unregister spectator
+  useEffect(() => {
+    if (!room) return;
+    const isHost = room.hostId === currentUserId;
+    const isGuest = room.guestId === currentUserId;
+    
+    if (!isHost && !isGuest) {
+      const roomRef = doc(db, "rooms", roomId);
+      
+      updateDoc(roomRef, {
+        spectators: arrayUnion(currentUserName)
+      }).catch(err => console.warn("Erro ao registrar espectador:", err));
+
+      return () => {
+        updateDoc(roomRef, {
+          spectators: arrayRemove(currentUserName)
+        }).catch(err => console.warn("Erro ao remover espectador:", err));
+      };
+    }
+  }, [roomId, currentUserId, currentUserName, room?.hostId, room?.guestId]);
 
   // Check stats logging on match conclusion
   useEffect(() => {
@@ -331,6 +352,18 @@ export default function GameBoard({ roomId, currentUserId, currentUserName, onLe
           </span>
         </div>
 
+        {room.spectators && room.spectators.length > 0 && (
+          <div className="bg-[#0B0C10] rounded p-3 border border-dark-border flex items-center gap-2.5 mt-4 text-xs font-mono animate-fade-in">
+            <Eye className="w-4 h-4 text-[#66FCF1] animate-pulse shrink-0" />
+            <div className="text-slate-400 flex-1 truncate">
+              <span className="text-secondary font-bold uppercase tracking-wider text-[10px] mr-2">
+                Espectadores ({room.spectators.length}):
+              </span>
+              <span className="text-slate-300 font-sans">{room.spectators.join(", ")}</span>
+            </div>
+          </div>
+        )}
+
         {/* Board & Players Dual Visualizer */}
         <div className="bg-[#0B0C10] rounded border border-dark-border p-6 flex flex-col items-center">
           
@@ -388,13 +421,20 @@ export default function GameBoard({ roomId, currentUserId, currentUserName, onLe
           {/* Current Turn Banner */}
           {room.status === "playing" && (
             <div className="mb-6 w-full text-center">
-              <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded text-xs font-mono uppercase tracking-widest border ${
-                isMyTurn
-                  ? "bg-primary/5 text-primary border-primary/30 glow-primary font-bold"
-                  : "bg-dark-bg/50 text-slate-500 border-dark-border"
-              }`}>
-                {isMyTurn ? "🔔 É a sua vez de jogar!" : `Sopro de expectativa: Vez de ${room.turn === room.hostId ? room.hostName : room.guestName}`}
-              </span>
+              {isPlayer ? (
+                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded text-xs font-mono uppercase tracking-widest border ${
+                  isMyTurn
+                    ? "bg-primary/5 text-primary border-primary/30 glow-primary font-bold"
+                    : "bg-dark-bg/50 text-slate-500 border-dark-border"
+                }`}>
+                  {isMyTurn ? "🔔 É a sua vez de jogar!" : `Sopro de expectativa: Vez de ${room.turn === room.hostId ? room.hostName : room.guestName}`}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded text-xs font-mono uppercase tracking-widest border bg-[#6875F5]/10 text-secondary border-secondary/20">
+                  <span className="animate-pulse h-2 w-2 rounded-full bg-secondary"></span>
+                  👁️ MODO ESPECTADOR • Turno de {room.turn === room.hostId ? room.hostName : room.guestName}
+                </span>
+              )}
             </div>
           )}
 
@@ -477,38 +517,51 @@ export default function GameBoard({ roomId, currentUserId, currentUserName, onLe
               <h4 className="text-sm font-display uppercase tracking-wider font-bold text-white mb-2 flex items-center justify-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" /> {getWinnerMessage()}
               </h4>
-              <p className="text-slate-500 text-[11px] mb-5 uppercase tracking-wide">
-                {room.playAgain && room.playAgain.includes(currentUserId)
-                  ? "Você concordou com a revanche. Aguardando oponente..."
-                  : "Deseja realizar uma revanche estratégica com o oponente?"}
-              </p>
+              {isPlayer ? (
+                <>
+                  <p className="text-slate-500 text-[11px] mb-5 uppercase tracking-wide">
+                    {room.playAgain && room.playAgain.includes(currentUserId)
+                      ? "Você concordou com a revanche. Aguardando oponente..."
+                      : "Deseja realizar uma revanche estratégica com o oponente?"}
+                  </p>
 
-              <div className="flex gap-3 justify-center">
-                <button
-                  id="game-replay-btn"
-                  type="button"
-                  onClick={handlePlayAgainRequest}
-                  disabled={room.playAgain && room.playAgain.includes(currentUserId)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded font-bold uppercase tracking-wider text-[11px] transition duration-200 cursor-pointer ${
-                    room.playAgain && room.playAgain.includes(currentUserId)
-                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
-                      : "bg-primary hover:bg-[#5bc7bf] text-dark-bg shadow-lg shadow-primary/10"
-                  }`}
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${room.playAgain && room.playAgain.includes(currentUserId) ? "" : "animate-spin-slow"}`} />
-                  {room.playAgain && room.playAgain.includes(currentUserId)
-                    ? "Aceito! Aguardando..."
-                    : "Jogar Novamente"}
-                </button>
-              </div>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      id="game-replay-btn"
+                      type="button"
+                      onClick={handlePlayAgainRequest}
+                      disabled={room.playAgain && room.playAgain.includes(currentUserId)}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded font-bold uppercase tracking-wider text-[11px] transition duration-200 cursor-pointer ${
+                        room.playAgain && room.playAgain.includes(currentUserId)
+                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                          : "bg-primary hover:bg-[#5bc7bf] text-dark-bg shadow-lg shadow-primary/10"
+                      }`}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${room.playAgain && room.playAgain.includes(currentUserId) ? "" : "animate-spin-slow"}`} />
+                      {room.playAgain && room.playAgain.includes(currentUserId)
+                        ? "Aceito! Aguardando..."
+                        : "Jogar Novamente"}
+                    </button>
+                  </div>
 
-              {/* Shows how many voted */}
-              <div className="flex justify-center items-center gap-1.5 mt-4">
-                <UserCheck className="w-3.5 h-3.5 text-slate-600" />
-                <span className="text-[10px] text-slate-600 font-mono uppercase tracking-wider">
-                  Revanche: {room.playAgain?.length || 0}/2 prontos
-                </span>
-              </div>
+                  {/* Shows how many voted */}
+                  <div className="flex justify-center items-center gap-1.5 mt-4">
+                    <UserCheck className="w-3.5 h-3.5 text-slate-600" />
+                    <span className="text-[10px] text-slate-600 font-mono uppercase tracking-wider">
+                      Revanche: {room.playAgain?.length || 0}/2 prontos
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 flex flex-col items-center gap-1">
+                  <span className="text-secondary font-mono text-[10px] uppercase tracking-widest bg-dark-card border border-dark-border px-3 py-1.5 rounded animate-pulse">
+                    👁️ MODO ESPECTADOR • PARTIDA ENCERRADA
+                  </span>
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mt-1">
+                    Aguardando decisão de revanche dos duelistas
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 

@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { collection, query, where, getDocs, doc, setDoc, limit, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { GameRoom, UserProfile } from "../types";
-import { Play, LogIn, Users, Plus, Shield, Globe2, Sparkles, Copy, Check } from "lucide-react";
+import { Play, LogIn, Users, Plus, Shield, Globe2, Sparkles, Copy, Check, Eye } from "lucide-react";
 
 interface LobbyProps {
   currentUserId: string;
@@ -23,12 +23,12 @@ export default function Lobby({ currentUserId, currentUserName, onJoinRoom }: Lo
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Load available waiting rooms
+  // Load available waiting and playing rooms
   useEffect(() => {
     const q = query(
       collection(db, "rooms"),
-      where("status", "==", "waiting"),
-      limit(10)
+      where("status", "in", ["waiting", "playing"]),
+      limit(20)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -173,12 +173,7 @@ export default function Lobby({ currentUserId, currentUserName, onJoinRoom }: Lo
 
       const roomData = roomSnap.docs[0].data() as GameRoom;
 
-      if (roomData.status !== "waiting" && roomData.hostId !== currentUserId && roomData.guestId !== currentUserId) {
-        setActionError("Essa sala já está cheia ou em andamento.");
-        setJoining(false);
-        return;
-      }
-
+      // Allow joining any room, either as player (waiting) or as spectator (playing/ended/etc)
       onJoinRoom(cleanCode);
     } catch (error) {
       console.error("Erro ao buscar sala pelo código: ", error);
@@ -288,10 +283,20 @@ export default function Lobby({ currentUserId, currentUserName, onJoinRoom }: Lo
                   key={room.id}
                   className="flex items-center justify-between p-4 rounded bg-dark-card border border-dark-border hover:border-secondary/40 transition duration-200"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-xs">{room.hostName}</span>
-                      <span className="text-[9px] uppercase tracking-widest font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded">Disponível</span>
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-white text-xs truncate max-w-[140px]">
+                        {room.status === "playing" ? `${room.hostName} vs ${room.guestName || "?"}` : room.hostName}
+                      </span>
+                      {room.status === "waiting" ? (
+                        <span className="text-[9px] uppercase tracking-widest font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0">
+                          Disponível
+                        </span>
+                      ) : (
+                        <span className="text-[9px] uppercase tracking-widest font-bold bg-[#6875F5]/10 text-[#6875F5] border border-[#6875F5]/20 px-1.5 py-0.5 rounded shrink-0 animate-pulse">
+                          Em Jogo
+                        </span>
+                      )}
                     </div>
                     <span className="text-[9px] text-secondary font-mono">Código: {room.id}</span>
                   </div>
@@ -299,10 +304,23 @@ export default function Lobby({ currentUserId, currentUserName, onJoinRoom }: Lo
                     id={`lobby-join-room-btn-${room.id}`}
                     type="button"
                     onClick={() => handleJoinQuickRoom(room)}
-                    className="flex items-center gap-1 bg-primary hover:bg-[#5bc7bf] text-dark-bg text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded transition cursor-pointer border-none"
+                    className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded transition cursor-pointer border-none ${
+                      room.status === "waiting"
+                        ? "bg-primary hover:bg-[#5bc7bf] text-dark-bg"
+                        : "bg-dark-bg border border-dark-border text-secondary hover:text-white hover:border-[#66FCF1]/50"
+                    }`}
                   >
-                    <Play className="w-3 h-3 fill-current" />
-                    Duelar
+                    {room.status === "waiting" ? (
+                      <>
+                        <Play className="w-3 h-3 fill-current" />
+                        Duelar
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5" />
+                        Assistir
+                      </>
+                    )}
                   </button>
                 </div>
               ))}
