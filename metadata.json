@@ -1,0 +1,6 @@
+{
+  "name": "Jogo da Velha Multiplayer",
+  "description": "Jogo de X O (Tic-Tac-Toe) multiplayer online com pontuação, chat em tempo real e histórico de partidas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
